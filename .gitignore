@@ -18,7 +18,7 @@ target/
 *.iws
 *.iml
 *.ipr
-!**/src/main/resources/db-credentials.yml
+src/main/resources/db-credentials.yml
 
 ### NetBeans ###
 /nbproject/private/
