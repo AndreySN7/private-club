@@ -15,4 +15,4 @@ public interface ClubMemberRepository extends JpaRepository<ClubMember, Long> {
 						         where one_time_code = :uuid and is_active = true)
 				""", nativeQuery = true)
 	Optional<ClubMember> findByClubMember(@Param("uuid") UUID uuid);
-	}
+}

@@ -3,6 +3,7 @@ package com.club.private_club.service.impl;
 import com.club.private_club.dto.ClubMemberDto;
 import com.club.private_club.entity.ClubMember;
 import com.club.private_club.entity.QRCode;
+import com.club.private_club.exception.DataValidateException;
 import com.club.private_club.exception.EntityNotFoundException;
 import com.club.private_club.mapper.ClubMemberMapper;
 import com.club.private_club.repository.ClubMemberRepository;
@@ -54,5 +55,47 @@ public class ClubMemberServiceImpl implements ClubMemberService {
 		log.info("new qrCode is added: {}", newQRCode);
 
 		return ClubMemberMapper.toDto(currentClubMember);
+	}
+
+	@Override
+	public ClubMemberDto addClubMember(ClubMemberDto clubMemberDto) {
+		ClubMember newClubMember = ClubMemberMapper.toEntity(clubMemberDto);
+		clubMemberRepository.save(newClubMember);
+		log.info("ClubMember is added: {}", newClubMember);
+
+		return ClubMemberMapper.toDto(newClubMember);
+	}
+
+	@Override
+	@Transactional
+	public String updateClubMember(Long id, ClubMemberDto clubMemberDto) {
+		Optional<ClubMember> clubMemberOptional = clubMemberRepository.findById(id);
+		if (clubMemberOptional.isEmpty()) {
+			throw new EntityNotFoundException("Club member with id \'" + id + "\' is not found.");
+		}
+		if (clubMemberDto.firstName().isBlank()) {
+			throw new DataValidateException("The firstName should not be empty.");
+		}
+		ClubMember currentClubMember = clubMemberOptional.get();
+		currentClubMember = ClubMember.builder()
+					.id(id)
+					.firstName(clubMemberDto.firstName())
+					.lastName(clubMemberDto.lastName())
+					.build();
+
+		clubMemberRepository.save(currentClubMember);
+		log.info("clubMember is updated: {}", currentClubMember);
+
+		return "Участник клуба c id \'" + id + "\' обновлен";
+	}
+
+	@Override
+	public void deleteClubMember(Long id) {
+		Optional<ClubMember> clubMemberOptional = clubMemberRepository.findById(id);
+		if (clubMemberOptional.isEmpty()) {
+			throw new EntityNotFoundException("Club member with id \'" + id + "\' is not found.");
+		}
+		clubMemberRepository.deleteById(id);
+		log.info("clubMember is removed: {}", clubMemberOptional.get());
 	}
 }
