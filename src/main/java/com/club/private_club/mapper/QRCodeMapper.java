@@ -7,7 +7,6 @@ public class QRCodeMapper {
 
 	public static QRCodeDto toDto (QRCode qrCode) {
 		return new QRCodeDto(
-					qrCode.getId(),
 					qrCode.getMemberId(),
 					qrCode.getOneTimeCode(),
 					qrCode.isActive()
@@ -16,7 +15,6 @@ public class QRCodeMapper {
 
 	public static QRCode toEntity (QRCodeDto qrCodeDto) {
 		return QRCode.builder()
-					.id(qrCodeDto.id())
 					.memberId(qrCodeDto.memberId())
 					.oneTimeCode(qrCodeDto.oneTimeCode())
 					.isActive(qrCodeDto.isActive())
