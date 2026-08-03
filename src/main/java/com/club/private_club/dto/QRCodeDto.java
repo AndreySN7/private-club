@@ -4,7 +4,7 @@ import java.util.UUID;
 
 public record QRCodeDto(
 			Long memberId,
-			UUID oneTimeCode,
-			boolean isActive
+			UUID qr,
+			Boolean isActive
 ) {
 }

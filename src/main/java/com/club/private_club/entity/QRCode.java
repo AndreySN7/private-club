@@ -1,5 +1,6 @@
 package com.club.private_club.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -29,6 +30,7 @@ public class QRCode {
 	Long id;
 	Long memberId;
 	@NonNull
-	UUID oneTimeCode;
-	boolean isActive;
+	@Column(name = "one_time_code")
+	UUID qr;
+	Boolean isActive;
 }

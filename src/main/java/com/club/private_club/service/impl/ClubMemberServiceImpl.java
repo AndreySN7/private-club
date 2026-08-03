@@ -25,19 +25,20 @@ import java.util.UUID;
 public class ClubMemberServiceImpl implements ClubMemberService {
 	private final ClubMemberRepository clubMemberRepository;
 	private final QRCodeRepository qrCodeRepository;
+	private final ClubMemberMapper clubMemberMapper;
 
 	@Override
 	@Transactional
-	public ClubMemberDto findByClubMember(UUID uuid) {
-		ClubMember currentClubMember = clubMemberRepository.findByClubMember(uuid)
-					.orElseThrow(() -> new EntityNotFoundException("Entry is not allowed."));
+	public ClubMemberDto findByClubMember(Long qrCodeId) {
+		ClubMember currentClubMember = clubMemberRepository.findActiveMemberOrThrow(qrCodeId);
 		log.info("ClubMember is found: {}", currentClubMember);
 
 		// Изменяем статус qr-кода на неактивный
-		Optional<QRCode> qrCodeOptional = qrCodeRepository.findByMemberIdAndOneTimeCode(currentClubMember.getId(), uuid);
+		Optional<QRCode> qrCodeOptional = qrCodeRepository.findById(qrCodeId);
 		if (qrCodeOptional.isPresent()) {
 			QRCode qrCode = qrCodeOptional.get();
-			qrCode.setActive(false);
+			log.info("QRCode: {} ", qrCode);
+			qrCode.setIsActive(false);
 			qrCodeRepository.save(qrCode);
 			log.info("uuid is updated: {}", qrCode);
 		}
@@ -45,27 +46,25 @@ public class ClubMemberServiceImpl implements ClubMemberService {
 		// Добавляем клиенту новый qr-код
 		QRCode newQRCode = QRCode.builder()
 					.memberId(currentClubMember.getId())
-					.oneTimeCode(UUID.randomUUID())
+					.qr(UUID.randomUUID())
 					.isActive(true)
 					.build();
 		qrCodeRepository.save(newQRCode);
 		log.info("new qrCode is added: {}", newQRCode);
 
-		return ClubMemberMapper.toDto(currentClubMember);
+		return clubMemberMapper.toDto(currentClubMember);
 	}
 
 	@Override
-	public String addClubMember(ClubMemberDto clubMemberDto) {
-		ClubMember newClubMember = ClubMemberMapper.toEntity(clubMemberDto);
+	public void addClubMember(ClubMemberDto clubMemberDto) {
+		ClubMember newClubMember = clubMemberMapper.toEntity(clubMemberDto);
 		clubMemberRepository.save(newClubMember);
 		log.info("ClubMember is added: {}", newClubMember);
-
-		return "Club member added";
 	}
 
 	@Override
 	@Transactional
-	public String updateClubMember(Long id, ClubMemberDto clubMemberDto) {
+	public void updateClubMember(Long id, ClubMemberDto clubMemberDto) {
 		if (clubMemberDto.firstName().isBlank()) {
 			throw new DataValidateException("The firstName should not be empty.");
 		}
@@ -82,68 +81,55 @@ public class ClubMemberServiceImpl implements ClubMemberService {
 
 		clubMemberRepository.save(currentClubMember);
 		log.info("clubMember is updated: {}", currentClubMember);
-
-		return "Club member with id = " + id + " updated";
 	}
 
 	@Override
-	public String deleteClubMember(Long id) {
+	public void deleteClubMember(Long id) {
 		ClubMember currentClubMember = clubMemberRepository.findById(id)
 					.orElseThrow(() -> new EntityNotFoundException("Club member with id = " + id + " is not found."));
 
 		clubMemberRepository.deleteById(id);
 		log.info("clubMember is removed: {}", currentClubMember);
-
-		return "Club member with id = " + id + " removed";
 	}
 
 	@Override
 	@Transactional
-	public String addClubMemberQR(Long id, QRCodeRequestDtoAdd qrCodeRequest) {
+	public void addClubMemberQR(Long id, QRCodeRequestDtoAdd qrCodeRequest) {
 		clubMemberRepository.findById(id)
 					.orElseThrow(() -> new EntityNotFoundException("Club member with id = " + id + " is not found."));
 
 		Integer count = qrCodeRequest.count();
 		count = count > 10 ? 10 : count;
 
-
 		QRCode newQRCode;
 
-		for (int i = 1; i <= count; i++) {
+		for (int i = 0; i < count; i++) {
 			newQRCode = QRCode.builder()
 						.memberId(id)
-						.oneTimeCode(UUID.randomUUID())
+						.qr(UUID.randomUUID())
 						.isActive(true)
 						.build();
 			qrCodeRepository.save(newQRCode);
 			log.info("QR-code is added: {}", newQRCode);
 		}
-
-		return "Member with id = " + id + " added " + count + " qr";
 	}
 
 	@Override
-	public String deleteClubMemberQR(Long id) {
+	public void deleteClubMemberQR(Long id) {
 		QRCode currentQRCod = qrCodeRepository.findById(id)
 					.orElseThrow(() -> new EntityNotFoundException("QR-code with id = " + id + " is not found."));
 
 		qrCodeRepository.deleteById(id);
 		log.info("qrCode is removed: {}", currentQRCod);
-
-		return "QR-code with id = " + id + " removed";
 	}
 
 	@Override
-	public String updateQRCode(Long id, QRCodeRequestDtoPatchQRActive patchQRActiveDto) {
+	public void updateQRCode(Long id, QRCodeRequestDtoPatchQRActive patchQRActiveDto) {
 		QRCode currentQRCode = qrCodeRepository.findById(id)
 					.orElseThrow(() -> new EntityNotFoundException("QR-code with id = " + id + " is not found."));
 
-		if (patchQRActiveDto.isActive() != null) {
-			currentQRCode.setActive(patchQRActiveDto.isActive());
-			qrCodeRepository.save(currentQRCode);
-		}
+		currentQRCode.setIsActive(patchQRActiveDto.isActive());
+		qrCodeRepository.save(currentQRCode);
 		log.info("qrCode status is updated: {}", currentQRCode);
-
-		return "QR-code with id = " + id + " updated";
 	}
 }

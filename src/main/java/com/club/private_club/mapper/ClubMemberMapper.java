@@ -2,20 +2,14 @@ package com.club.private_club.mapper;
 
 import com.club.private_club.dto.ClubMemberDto;
 import com.club.private_club.entity.ClubMember;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-public class ClubMemberMapper {
+@Mapper(componentModel = "spring")
+public interface ClubMemberMapper {
 
-	public static ClubMemberDto toDto(ClubMember clubMember) {
-		return new ClubMemberDto(
-					clubMember.getFirstName(),
-					clubMember.getLastName()
-		);
-	}
+	ClubMemberDto toDto(ClubMember clubMember);
 
-	public static ClubMember toEntity(ClubMemberDto clubMemberDto) {
-		return ClubMember.builder()
-					.firstName(clubMemberDto.firstName())
-					.lastName(clubMemberDto.lastName())
-					.build();
-	}
+	@Mapping(target = "id", ignore = true)
+	ClubMember toEntity(ClubMemberDto clubMemberDto);
 }

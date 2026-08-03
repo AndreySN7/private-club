@@ -4,20 +4,18 @@ import com.club.private_club.dto.ClubMemberDto;
 import com.club.private_club.dto.QRCodeRequestDtoAdd;
 import com.club.private_club.dto.QRCodeRequestDtoPatchQRActive;
 
-import java.util.UUID;
-
 public interface ClubMemberService {
-	ClubMemberDto findByClubMember(UUID uuid);
+	ClubMemberDto findByClubMember(Long qrCodeId);
 
-	String addClubMember(ClubMemberDto clubMemberDto);
+	void addClubMember(ClubMemberDto clubMemberDto);
 
-	String updateClubMember(Long id, ClubMemberDto clubMemberDto);
+	void updateClubMember(Long id, ClubMemberDto clubMemberDto);
 
-	String deleteClubMember(Long id);
+	void deleteClubMember(Long id);
 
-	String addClubMemberQR(Long id, QRCodeRequestDtoAdd qrCodeRequestDtoAdd);
+	void addClubMemberQR(Long id, QRCodeRequestDtoAdd qrCodeRequestDtoAdd);
 
-	String deleteClubMemberQR(Long id);
+	void deleteClubMemberQR(Long id);
 
-	String updateQRCode(Long id, QRCodeRequestDtoPatchQRActive patchQRActiveDto);
+	void updateQRCode(Long id, QRCodeRequestDtoPatchQRActive patchQRActiveDto);
 }

@@ -2,22 +2,14 @@ package com.club.private_club.mapper;
 
 import com.club.private_club.dto.QRCodeDto;
 import com.club.private_club.entity.QRCode;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-public class QRCodeMapper {
+@Mapper(componentModel = "spring")
+public interface QRCodeMapper {
 
-	public static QRCodeDto toDto (QRCode qrCode) {
-		return new QRCodeDto(
-					qrCode.getMemberId(),
-					qrCode.getOneTimeCode(),
-					qrCode.isActive()
-		);
-	}
+	QRCodeDto toDto(QRCode qrCode);
 
-	public static QRCode toEntity (QRCodeDto qrCodeDto) {
-		return QRCode.builder()
-					.memberId(qrCodeDto.memberId())
-					.oneTimeCode(qrCodeDto.oneTimeCode())
-					.isActive(qrCodeDto.isActive())
-					.build();
-	}
+	@Mapping(target = "id", ignore = true)
+	QRCode toEntity(QRCodeDto qrCodeDto);
 }
