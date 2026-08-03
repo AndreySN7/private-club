@@ -5,7 +5,6 @@ import com.club.private_club.dto.QRCodeRequestDtoAdd;
 import com.club.private_club.dto.QRCodeRequestDtoPatchQRActive;
 import com.club.private_club.entity.ClubMember;
 import com.club.private_club.entity.QRCode;
-import com.club.private_club.exception.DataValidateException;
 import com.club.private_club.exception.EntityNotFoundException;
 import com.club.private_club.mapper.ClubMemberMapper;
 import com.club.private_club.repository.ClubMemberRepository;
@@ -65,10 +64,6 @@ public class ClubMemberServiceImpl implements ClubMemberService {
 	@Override
 	@Transactional
 	public void updateClubMember(Long id, ClubMemberDto clubMemberDto) {
-		if (clubMemberDto.firstName().isBlank()) {
-			throw new DataValidateException("The firstName should not be empty.");
-		}
-
 		clubMemberRepository.findById(id)
 					.orElseThrow(() -> new EntityNotFoundException("Club member with id = " + id + " is not found."));
 
