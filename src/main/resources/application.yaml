@@ -1,3 +1,19 @@
 spring:
   application:
     name: private-club
+  config:
+    import: optional:db-credentials.yml
+  datasource:
+    url: jdbc:postgresql://localhost:5432/private_club
+    username: ${DB_USERNAME:login}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database: PostgreSQL
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: false
