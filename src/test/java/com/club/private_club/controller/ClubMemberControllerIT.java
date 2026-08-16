@@ -1,22 +1,19 @@
 package com.club.private_club.controller;
 
+import com.club.private_club.dto.ClubMemberDto;
 import com.club.private_club.entity.ClubMember;
 import com.club.private_club.entity.QRCode;
 import com.club.private_club.repository.ClubMemberRepository;
 import com.club.private_club.repository.QRCodeRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,30 +21,15 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureMockMvc
-@Testcontainers
 @Slf4j
-class ClubMemberControllerIT {
+class ClubMemberControllerIT extends AbstractIntegrationTest {
 
-	@Container
-	static final PostgreSQLContainer POSTGRESQL_CONTAINER =
-				new PostgreSQLContainer("postgres:latest")
-							.withDatabaseName("test_db")
-							.withUsername("test")
-							.withPassword("test");
-
-	@DynamicPropertySource
-	static void setProperties(DynamicPropertyRegistry registry) {
-		registry.add("spring.datasource.url", POSTGRESQL_CONTAINER::getJdbcUrl);
-		registry.add("spring.datasource.username", POSTGRESQL_CONTAINER::getUsername);
-		registry.add("spring.datasource.password", POSTGRESQL_CONTAINER::getPassword);
-		registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-
-	}
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -121,9 +103,67 @@ class ClubMemberControllerIT {
 
 	@Test
 	@DisplayName("буквы (анг) -> внутренняя ошибка сервера")
-	void findByClubMember_whenLetters_thenInternalServerError() throws Exception {
+	void getClubMember_whenLetters_thenInternalServerError() throws Exception {
 		mockMvc.perform(get("/api/v1/club_member/a"))
 					.andExpect(status().isInternalServerError())
 					.andExpect(jsonPath("$.message").value("Внутренняя ошибка сервера"));
+	}
+
+	@Test
+	@DisplayName("пустое имя (firstName) -> выполняется валидация 'Value can not be empty'")
+	void addClubMember_whenFirstNameEmpty_thenValidationBeingPerformed() throws Exception {
+		ClubMemberDto clubMemberDto = new ClubMemberDto("", "Smith");
+		String json = objectMapper.writeValueAsString(clubMemberDto);
+
+		mockMvc.perform(post("/api/v1/club_member")
+								.contentType(MediaType.APPLICATION_JSON)
+								.content(json))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value("Value can not be empty"));
+	}
+
+	@Test
+	@DisplayName("firstName непустое, lastName пустое или null -> участник создается успешно")
+	void addClubMember_whenFirstNameNotEmptyAndLastNameEmptyOrNull_thenParticipantCreatedSuccessfully() throws Exception {
+		ClubMemberDto clubMemberDto = new ClubMemberDto("Bill", "");
+		String json = objectMapper.writeValueAsString(clubMemberDto);
+
+		mockMvc.perform(post("/api/v1/club_member")
+								.contentType(MediaType.APPLICATION_JSON)
+								.content(json))
+					.andExpect(status().isCreated());
+
+		List<ClubMember> newClubMember = clubMemberRepository.findAll();
+
+		assertThat(newClubMember).hasSize(1);
+		Assertions.assertEquals("Bill", newClubMember.getFirst().getFirstName());
+		Assertions.assertEquals("", newClubMember.getLast().getLastName());
+	}
+
+	@Test
+	@DisplayName("firstName непустое, lastName непустое -> участник создается успешно")
+	void addClubMember_whenFirstNameNotEmptyAndLastNameNotEmpty_thenParticipantCreatedSuccessfully() throws Exception {
+		ClubMemberDto clubMemberDto = new ClubMemberDto("John", "Holly");
+		String json = objectMapper.writeValueAsString(clubMemberDto);
+
+		mockMvc.perform(post("/api/v1/club_member")
+								.contentType(MediaType.APPLICATION_JSON)
+								.content(json))
+					.andExpect(status().isCreated());
+
+		List<ClubMember> newClubMember = clubMemberRepository.findAll();
+		assertThat(newClubMember).hasSize(1);
+		Assertions.assertEquals("John", newClubMember.getFirst().getFirstName());
+		Assertions.assertEquals("Holly", newClubMember.getFirst().getLastName());
+	}
+
+	@Test
+	@DisplayName("json пустой -> срабатывает валидация 'Value can not be empty'")
+	void addClubMember_whenJsonNull_thenValidationBeingPerformed() throws Exception {
+		mockMvc.perform(post("/api/v1/club_member")
+								.contentType(MediaType.APPLICATION_JSON)
+								.content("{}"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value("Value can not be empty"));
 	}
 }
