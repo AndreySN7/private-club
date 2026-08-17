@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -158,23 +159,57 @@ class QRCodeControllerIT extends AbstractIntegrationTest {
 		assertThat(qrCodes).isEmpty();
 	}
 
+	@Test
 	@DisplayName("qrId null -> исключение 'внутренняя ошибка сервера'")
-	void updateQRCode_whenQrIdNull_thenInternalServerError() {
-
+	void updateQRCode_whenQrIdNull_thenInternalServerError() throws Exception {
+		mockMvc.perform(patch("/api/v1/qr/")
+								.contentType(MediaType.APPLICATION_JSON)
+								.content("{\"isActive\": false}"))
+					.andExpect(status().isInternalServerError())
+					.andExpect(jsonPath("$.message").value("Внутренняя ошибка сервера"));
 	}
 
+	@Test
 	@DisplayName("qrId не найден -> new EntityNotFoundException('QR-code is not found.')")
-	void updateQRCode_whenQrIdNotFound_thenThrowEntityNotFound() {
-
+	void updateQRCode_whenQrIdNotFound_thenThrowEntityNotFound() throws Exception {
+		int id = 1;
+		mockMvc.perform(patch("/api/v1/qr/" + id)
+								.contentType(MediaType.APPLICATION_JSON)
+								.content("{\"isActive\": false}"))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.message")
+								.value("QR-code with id = " + id + " is not found."));
 	}
 
+	@Test
 	@DisplayName("qrId найден, json null -> срабатывает валидация 'Value can not be null')")
-	void updateQRCode_whenQrIdFoundAndJsonNull_thenValidationBeingPerformed() {
+	void updateQRCode_whenQrIdFoundAndJsonNull_thenValidationBeingPerformed() throws Exception {
+		Long memberId = 1L;
+		QRCode qrCode = qrCodeRepository.save(
+					new QRCode(null, memberId, UUID.randomUUID(), false));
 
+		mockMvc.perform(patch("/api/v1/qr/" + qrCode.getId())
+								.contentType(MediaType.APPLICATION_JSON)
+								.content("{}"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value("Value can not be null"));
 	}
 
+	@Test
 	@DisplayName("qrId найден, json не null -> устанавливается значение isActive из json")
-	void updateQRCode_whenQrIdFoundAndJsonNotNull_thenIsActiveValueSetFromJson() {
+	void updateQRCode_whenQrIdFoundAndJsonNotNull_thenIsActiveValueSetFromJson() throws Exception {
+		Long memberId = 1L;
+		QRCode qrCode = qrCodeRepository.save(
+					new QRCode(null, memberId, UUID.randomUUID(), true));
 
+		mockMvc.perform(patch("/api/v1/qr/"+qrCode.getId())
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"isActive\": false}"))
+					.andExpect(status().isOk());
+
+		List<QRCode> qrCodes = qrCodeRepository.findAll();
+
+		assertThat(qrCodes).hasSize(1);
+		assertThat(qrCodes.getFirst().getIsActive()).isFalse();
 	}
 }
