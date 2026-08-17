@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -262,5 +263,37 @@ class ClubMemberControllerIT extends AbstractIntegrationTest {
 					.get()
 					.extracting(ClubMember::getFirstName, ClubMember::getLastName)
 					.containsExactly("Larry", "Bin");
+	}
+
+	@Test
+	@DisplayName("id null -> исключение 'внутренняя ошибка сервера'")
+	void deleteClubMember_whenIdNull_thenInternalServerError() throws Exception {
+		mockMvc.perform(delete("/api/v1/club_member/")
+								.contentType(MediaType.APPLICATION_JSON))
+					.andExpect(status().isInternalServerError())
+					.andExpect(jsonPath("$.message").value("Внутренняя ошибка сервера"));
+	}
+
+	@Test
+	@DisplayName("id не найден -> исключение EntityNotFoundException('Club member is not found.')")
+	void deleteClubMember_whenIdNotFound_thenThrowEntityNotFound() throws Exception {
+		int id = 1;
+		mockMvc.perform(delete("/api/v1/club_member/" + id)
+								.contentType(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.message").value("Club member with id = " + id + " is not found."));
+	}
+
+	@Test
+	@DisplayName("id найден -> пользователь удален успешно")
+	void deleteClubMember_whenIdFound_thenParticipantDeletedSuccessfully() throws Exception {
+		ClubMember clubMember = clubMemberRepository.save(
+					new ClubMember(null, "Jane", "Pim"));
+
+		mockMvc.perform(delete("/api/v1/club_member/" + clubMember.getId())
+								.contentType(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+
+		assertThat(clubMemberRepository.findById(clubMember.getId())).isNotPresent();
 	}
 }
