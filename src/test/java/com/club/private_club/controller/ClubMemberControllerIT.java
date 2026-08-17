@@ -5,7 +5,6 @@ import com.club.private_club.entity.ClubMember;
 import com.club.private_club.entity.QRCode;
 import com.club.private_club.repository.ClubMemberRepository;
 import com.club.private_club.repository.QRCodeRepository;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +26,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Slf4j
 class ClubMemberControllerIT extends AbstractIntegrationTest {
 
 	@Autowired
