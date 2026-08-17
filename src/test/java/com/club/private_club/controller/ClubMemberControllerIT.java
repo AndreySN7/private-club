@@ -22,6 +22,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -165,5 +166,101 @@ class ClubMemberControllerIT extends AbstractIntegrationTest {
 								.content("{}"))
 					.andExpect(status().isBadRequest())
 					.andExpect(jsonPath("$.message").value("Value can not be empty"));
+	}
+
+	@Test
+	@DisplayName("id null -> исключение 'внутренняя ошибка сервера'")
+	void updateClubMember_whenIdNull_thenInternalServerError() throws Exception {
+		ClubMemberDto clubMember = new ClubMemberDto("Bob", "Ri");
+		String json = objectMapper.writeValueAsString(clubMember);
+
+		mockMvc.perform(put("/api/v1/club_member")
+								.contentType(MediaType.APPLICATION_JSON)
+								.content(json))
+					.andExpect(status().isInternalServerError())
+					.andExpect(jsonPath("$.message").value("Внутренняя ошибка сервера"));
+	}
+
+	@Test
+	@DisplayName("id не найден -> исключение EntityNotFoundException(Club member is not found.)")
+	void updateClubMember_whenIdNotFound_thenThrowEntityNotFound() throws Exception {
+		ClubMemberDto clubMember = new ClubMemberDto("Bob", "Ri");
+		String json = objectMapper.writeValueAsString(clubMember);
+		int id = 1;
+
+		mockMvc.perform(put("/api/v1/club_member/" + id)
+								.contentType(MediaType.APPLICATION_JSON)
+								.content(json))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.message")
+								.value("Club member with id = " + id + " is not found."));
+	}
+
+	@Test
+	@DisplayName("id найден, json пустой -> срабатывает валидация 'Value can not be empty'")
+	void updateClubMember_whenIdFoundAndJsonNull_thenValidationBeingPerformed() throws Exception {
+		ClubMember clubMember = clubMemberRepository.save(
+					new ClubMember(null, "Ron", "Ko"));
+
+		mockMvc.perform(put("/api/v1/club_member/" + clubMember.getId())
+								.contentType(MediaType.APPLICATION_JSON)
+								.content("{}"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value("Value can not be empty"));
+	}
+
+	@Test
+	@DisplayName("id найден, firstName пустое или null -> срабатывает валидация 'Value can not be empty'")
+	void updateClubMember_whenIdFoundAndFirstNameNullOrEmpty_thenValidationBeingPerformed() throws Exception {
+		ClubMember clubMember = clubMemberRepository.save(
+					new ClubMember(null, "Bob", "Si"));
+		ClubMemberDto clubMemberDto = new ClubMemberDto("", "Si");
+		String json = objectMapper.writeValueAsString(clubMemberDto);
+
+		mockMvc.perform(put("/api/v1/club_member/" + clubMember.getId())
+								.contentType(MediaType.APPLICATION_JSON)
+								.content(json))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value("Value can not be empty"));
+	}
+
+	@Test
+	@DisplayName("id найден, firstName непустое, lastName пустое или null -> пользователь обновляется успешно")
+	void updateClubMember_whenIdFoundAndFirstNameNotEmptyAndLastNameNullOrEmpty_thenParticipantCreatedSuccessfully() throws Exception {
+		ClubMember clubMember = clubMemberRepository.save(
+					new ClubMember(null, "Rob", "Jons"));
+		ClubMemberDto clubMemberDto = new ClubMemberDto("Larry", null);
+		String json = objectMapper.writeValueAsString(clubMemberDto);
+
+		mockMvc.perform(put("/api/v1/club_member/" + clubMember.getId())
+								.contentType(MediaType.APPLICATION_JSON)
+								.content(json))
+					.andExpect(status().isOk());
+
+		assertThat(clubMemberRepository.findById(clubMember.getId()))
+					.isPresent()
+					.get()
+					.extracting(ClubMember::getFirstName, ClubMember::getLastName)
+					.containsExactly("Larry", null);
+	}
+
+	@Test
+	@DisplayName("id найден, firstName непустое, lastName непустое -> пользователь обновляется успешно")
+	void updateClubMember_whenIdFoundAndFirstNameNotEmptyAndLastNameNotEmpty_thenParticipantCreatedSuccessfully() throws Exception {
+		ClubMember clubMember = clubMemberRepository.save(
+					new ClubMember(null, "Rob", "Jons"));
+		ClubMemberDto clubMemberDto = new ClubMemberDto("Larry", "Bin");
+		String json = objectMapper.writeValueAsString(clubMemberDto);
+
+		mockMvc.perform(put("/api/v1/club_member/" + clubMember.getId())
+								.contentType(MediaType.APPLICATION_JSON)
+								.content(json))
+					.andExpect(status().isOk());
+
+		assertThat(clubMemberRepository.findById(clubMember.getId()))
+					.isPresent()
+					.get()
+					.extracting(ClubMember::getFirstName, ClubMember::getLastName)
+					.containsExactly("Larry", "Bin");
 	}
 }
