@@ -12,13 +12,15 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-public class QRCodeControllerIT extends AbstractIntegrationTest {
+class QRCodeControllerIT extends AbstractIntegrationTest {
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -28,9 +30,9 @@ public class QRCodeControllerIT extends AbstractIntegrationTest {
 	private QRCodeRepository qrCodeRepository;
 
 	@BeforeEach
-	public void setup() {
-		clubMemberRepository.deleteAll();
+	void setup() {
 		qrCodeRepository.deleteAll();
+		clubMemberRepository.deleteAll();
 	}
 
 	@Test
@@ -88,6 +90,7 @@ public class QRCodeControllerIT extends AbstractIntegrationTest {
 					.andExpect(status().isCreated());
 
 		List<QRCode> qrCodes = qrCodeRepository.findAll();
+
 		assertThat(qrCodes).hasSize(10);
 		assertThat(qrCodes)
 					.extracting(QRCode::getIsActive)
@@ -109,6 +112,7 @@ public class QRCodeControllerIT extends AbstractIntegrationTest {
 					.andExpect(status().isCreated());
 
 		List<QRCode> qrCodes = qrCodeRepository.findAll();
+
 		assertThat(qrCodes).hasSize(2);
 		assertThat(qrCodes)
 					.extracting(QRCode::getIsActive)
@@ -118,22 +122,41 @@ public class QRCodeControllerIT extends AbstractIntegrationTest {
 					.containsOnly(clubMember.getId());
 	}
 
-
+	@Test
 	@DisplayName("qrId null -> исключение 'внутренняя ошибка сервера'")
-	void deleteClubMemberQR_whenQrIdNull_thenInternalServerError() {
-
+	void deleteClubMemberQR_whenQrIdNull_thenInternalServerError() throws Exception {
+		mockMvc.perform(delete("/api/v1/qr/")
+								.contentType(MediaType.APPLICATION_JSON))
+					.andExpect(status().isInternalServerError())
+					.andExpect(jsonPath("$.message").value("Внутренняя ошибка сервера"));
 	}
 
+	@Test
 	@DisplayName("qrId не найден -> new EntityNotFoundException('QR-code is not found.')")
-	void deleteClubMemberQR_whenQrIdNotFound_thenThrowEntityNotFound() {
-
+	void deleteClubMemberQR_whenQrIdNotFound_thenThrowEntityNotFound() throws Exception {
+		int id = 1;
+		mockMvc.perform(delete("/api/v1/qr/" + id)
+								.contentType(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.message")
+								.value("QR-code with id = " + id + " is not found."));
 	}
 
+	@Test
 	@DisplayName("qrId найден -> qr удаляется успешно")
-	void deleteClubMemberQR_whenQrIdFound_thenQrDeletedSuccessfully() {
+	void deleteClubMemberQR_whenQrIdFound_thenQrDeletedSuccessfully() throws Exception {
+		Long memberId = 1L;
+		QRCode qrCode = qrCodeRepository.save(
+					new QRCode(null, memberId, UUID.randomUUID(), false));
 
+		mockMvc.perform(delete("/api/v1/qr/" + qrCode.getId())
+								.contentType(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+
+		List<QRCode> qrCodes = qrCodeRepository.findAll();
+
+		assertThat(qrCodes).isEmpty();
 	}
-
 
 	@DisplayName("qrId null -> исключение 'внутренняя ошибка сервера'")
 	void updateQRCode_whenQrIdNull_thenInternalServerError() {
